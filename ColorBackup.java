@@ -5,6 +5,7 @@ import static org.firstinspires.ftc.teamcode.SleeveDetection.ParkingPosition.LEF
 import static org.firstinspires.ftc.teamcode.SleeveDetection.ParkingPosition.RIGHT;
 import static org.openftc.easyopencv.OpenCvCameraRotation.SIDEWAYS_LEFT;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -13,6 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
@@ -28,27 +30,8 @@ public class ColorBackup extends LinearOpMode {
     private DcMotor fl = null;
     private DcMotor bl = null;
     private DcMotor br = null;
-    private DcMotor VL = null;
-    private DcMotor VR = null;
-    private CRServo intake = null;
     private SleeveDetection sleeveDetection;
     private OpenCvCamera camera;
-    private BNO055IMU imu = null;
-    public double imuAngle;
-
-    private double robotHeading = 0;
-    private double headingOffset = 0;
-    private double headingError = 0;
-
-
-    private double targetHeading = 0;
-    private double driveSpeed = 0;
-    private double turnSpeed = 0;
-    private double leftSpeed = 0;
-    private double rightSpeed = 0;
-    private int leftTarget = 0;
-    private int rightTarget = 0;
-
     static final double TURN_SPEED = 0.6;     // Max Turn speed to limit turn rate
 
     SleeveDetection pipeline = new SleeveDetection();
@@ -78,51 +61,40 @@ public class ColorBackup extends LinearOpMode {
         fl = hardwareMap.get(DcMotor.class, "frontLeft");
         br = hardwareMap.get(DcMotor.class, "backRight");
         bl = hardwareMap.get(DcMotor.class, "backLeft");
-        VL = hardwareMap.get(DcMotor.class, "ViperLeft");
-        VR = hardwareMap.get(DcMotor.class, "ViperRight");
-        intake = hardwareMap.get(CRServo.class, "inTake");
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, webcamName), cameraMonitorViewId);
         sleeveDetection = new SleeveDetection();
         camera.setPipeline(sleeveDetection);
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
 
         fr.setDirection(DcMotor.Direction.REVERSE);
         fl.setDirection(DcMotor.Direction.FORWARD);
         br.setDirection(DcMotor.Direction.REVERSE);
         bl.setDirection(DcMotor.Direction.FORWARD);
 
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.mode = BNO055IMU.SensorMode.IMU;
-        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.loggingEnabled = false;
 
-        imu.initialize(parameters);
 
         fr.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         fl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         br.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         bl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        VL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        VR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
 
 
         fr.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         fl.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         br.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         bl.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        VL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        VR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        Telemetry dashboardTelemetry = dashboard.getTelemetry();
+
 
 
         telemetry.addData("Starting at", "%7d :%7d",
                 fr.getCurrentPosition(),
                 fl.getCurrentPosition(),
                 br.getCurrentPosition(),
-                bl.getCurrentPosition(),
-                VL.getCurrentPosition(),
-                VR.getCurrentPosition());
+                bl.getCurrentPosition());
         telemetry.update();
 
         camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
@@ -139,25 +111,25 @@ public class ColorBackup extends LinearOpMode {
         while (!isStarted()) {
             telemetry.addData("ROTATION: ", sleeveDetection.getPosition());
             telemetry.update();
+            FtcDashboard.getInstance().startCameraStream(camera, 60);
+
+
+            dashboardTelemetry.addData("ROTATION: ", sleeveDetection.getPosition());
+            dashboardTelemetry.update();
         }
         waitForStart();
 
         SleeveDetection.ParkingPosition P = sleeveDetection.getPosition();
 
         if (P == LEFT) {
-            encoderDrive(DRIVE_SPEED, 5, 5, 5.0);
-            encoderDrive(DRIVE_SPEED, 28, -28, 2.0);
-            encoderDrive(DRIVE_SPEED, 34, 34, 5.0);
-            encoderDrive(DRIVE_SPEED, -28, 28, 5.0);
-            encoderDrive(DRIVE_SPEED, 33, 33, 5.0);
+            encoderDrive(DRIVE_SPEED, 20, 20, 5.0);
         } else if (P == CENTER) {
             encoderDrive(DRIVE_SPEED, 37, 37, 5.0);
         } else if (P == RIGHT) {
-            encoderDrive(DRIVE_SPEED, 5, 5, 5.0);
-            encoderDrive(DRIVE_SPEED, -29, 29, 5.0);
-            encoderDrive(DRIVE_SPEED, 32, 32, 5.0);
-            encoderDrive(DRIVE_SPEED, 28, -28, 5.0);
-            encoderDrive(DRIVE_SPEED, 33, 33, 5.0);
+            encoderDrive(DRIVE_SPEED, 37, 37, 5.0);
+            encoderDrive(DRIVE_SPEED, 40, -40, 5.0);
+            encoderDrive(DRIVE_SPEED, 10, 10, 5.0);
+
         }
 
         telemetry.addData("Path", "Complete");
